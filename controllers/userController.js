@@ -7,22 +7,22 @@ const dotenv = require("dotenv");
 
 
 // create a nodemailer transporter
-// const transporter = nodemailer.createTransport( {
-//     service: "Gmail",
-//     auth: {
-//         user: process.env.USER_EMAIL,
-//         pass: process.env.USER_PASSWORD,
-//     }
-// });
-
-const transporter = nodemailer.createTransport({
-    host: "sandbox.smtp.mailtrap.io",
-    port: 2525,
+const transporter = nodemailer.createTransport( {
+    service: "gmail",
     auth: {
-      user: process.env.MAIL_TRAP_USERNAME,
-      pass: process.env.MAIL_TRAP_PASSWORD
+        user: process.env.USER_EMAIL,
+        pass: process.env.USER_PASSWORD,
     }
-  });
+});
+
+// const transporter = nodemailer.createTransport({
+// host: "sandbox.smtp.mailtrap.io",
+//     port: 2525,
+//     auth: {
+//       user: process.env.MAIL_TRAP_USERNAME,
+//       pass: process.env.MAIL_TRAP_PASSWORD
+//     }
+//   });
   
   // SignUp
   const signUp = async ( req, res ) => {
@@ -49,6 +49,7 @@ const transporter = nodemailer.createTransport({
                   username,
                   email,
                   password: hashedPassword
+                  
               } );
               
               // send verification email
@@ -157,6 +158,7 @@ const transporter = nodemailer.createTransport({
           const { email, password } = req.body;
           // find user by their registered email
           const user = await userModel.findOne( { email } );
+          
           // check if email exist
           if ( !user ||  !user.isVerified) {
               res.status( 404 ).json( {
@@ -172,7 +174,7 @@ const transporter = nodemailer.createTransport({
                   })
               } else {
                   // save the generated token to "token" variable
-                  const token = await genToken( user );
+                  const token = await genToken( user )
                   // return a response
                   res.status( 200 ).json( {
                       message: "Sign In successful",
@@ -187,36 +189,65 @@ const transporter = nodemailer.createTransport({
       }
   }
   
-  const signOut = async (req, res) => {
-      try {
-          // get the token from the authorization head
-          const token = req.headers.authorization;
+//   const signOut = async (req, res) => {
+//       try {
+//           // get the token from the authorization head
+//           const token = req.headers.authorization;
   
-          // find the user by the token
-          const user = await userModel.find( { token } );
+//           // find the user by the token
+//           const user = await userModel.find( { token } );
   
-          if ( !user ) {
-              return res.status( 401 ).json( {
-                  message: "Invalid token"
-              })
-          }
+//           if ( !user ) {
+//               return res.status( 401 ).json( {
+//                   message: "Invalid token"
+//               })
+//           }
   
-          // clear the token
-          user.token = '';
+//           // clear the token
+//           user.token = '';
   
-          // save the user with the saved token
-          // await user.save();
+//           // save the user with the saved token
+//           // await user.save();
   
-          return res.status( 200 ).json( {
-              message: "User signed out successfully"
-          })
-      } catch ( error ) {
-          console.error( "Something went wrong", error.message );
-          res.status( 500 ).json( {
-              message: error.message
-          })
-      }
-  }
+//           return res.status( 200 ).json( {
+//               message: "User signed out successfully"
+//           })
+//       } catch ( error ) {
+//           console.error( "Something went wrong", error.message );
+//           res.status( 500 ).json( {
+//               message: error.message
+//           })
+//       }
+//   }
+
+const signOut = async(req, res) =>{
+    try {
+        const {email} = req.body;
+        // find the user by the email
+        const findUser = await userModel.findOne({email})
+
+        if (!findUser) {
+            return res.status(401).json({
+                message: "Invalid Email"
+            })
+        } else {
+            // clear the token 
+            findUser.token = ''
+
+            // save the data
+            await findUser.save()
+            return res.status(201).json({
+                message: "User signout successfully"
+            })
+
+        }
+
+    } catch (error) {
+       res.status(500).json({
+        message: error.message
+       })
+    }
+}
   
   const genToken = async ( user ) => {
       const token = await jwt.sign( {
@@ -227,6 +258,167 @@ const transporter = nodemailer.createTransport({
       
       return token;
   }
+
+  
+// Change password
+const changePasword = async(req, res) =>{
+    try {
+        const {oldPassword, password} = req.body;
+        const id = req.params.id;
+        const user = await userModel.findById(id);
+        // check if email exist
+        if ( !user ||  !user.isVerified) {
+            res.status( 404 ).json( {
+                message: `User with this email: ${email} is not found.`
+            })
+        } {
+            // compare user password with the saved password.
+            const isPassword = await bcrypt.compare( oldPassword, user.password );
+            // check for password error
+            if ( !isPassword ) {
+                res.status( 400 ).json( {
+                    message: "Incorrect password"
+                })
+            } else {
+                // save the generated token to "token" variable
+                const token = await genToken( user )
+                
+                // salt the password using bcrypt
+        const saltedRound = await bcrypt.genSalt( 10 );
+        // hash the salted password using bcrypt
+        const hashedPassword = await bcrypt.hash( password, saltedRound );
+        const bodyData = {
+            password: hashedPassword
+        } 
+         const changedPassword = await userModel.findByIdAndUpdate(id, bodyData, {new: true})
+         return res.status(201).json({
+            message: "Password changed Successfully"
+        
+         })
+            }
+        }
+    } catch (error) {
+        res.status(500).json({message:error.message})
+    }
+}
+
+   
+
+const resetPassword = async(req, res) =>{
+    try {
+        const {email} = req.body;
+
+        // check if the email exists in the database
+        const user = await userModel.findOne({email});
+        if(!user) {
+            return res.status(404).json({
+                error: 'User not found'
+            });
+        }
+
+        //Generate a random password
+        const newPassword = Math.random().toString(36).slice(-8);
+
+        // Hash the new password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        // Update the user's password
+        user.password = hashedPassword;
+        await user.save();
+
+        // Send the new password to the user's email
+        const transporter = nodemailer.createTransport( {
+            service: "Gmail",
+            auth: {
+                user: process.env.USER_EMAIL,
+                pass: process.env.USER_PASSWORD,
+            }
+        });
+
+        const mailOptions = {
+            from: process.env.SENDER_EMAIL,
+            to: user.email,
+            subject: "Password Reset",
+            text: `Your new password is: ${newPassword}`, 
+        };
+
+        transporter.sendMail(mailOptions, (error) =>{
+            if (error) {
+                console.log('Error sending email:', error);
+                return res.status(500).json({
+                    error: 'failed to send email'
+                });
+                    
+                
+            }
+            return res.status(200).json({
+                message: 'Password reset successfully'
+            });
+        });
+
+
+    } catch (error) {
+        console.log("Error resetting password:", error);
+        res.status(500).json({
+            error:'An internal server error occurred'
+        })
+    }
+
+}
+
+
+const forgotPassword = async(req, res) =>{
+    try {
+        const {email} = req.body;
+
+        // check if the email exists in the database
+        const user = await userModel.findOne({email});
+        if(!user) {
+            return res.status(404).json({
+                error: 'User not found'
+            });
+        }
+
+        //Generate a temporary token for password reset
+        const resetToken = await jwt.sign( { email }, process.env.JWT_SECRETE, { expiresIn: "30m" });
+
+        // send an email with the reset token
+        const transporter = nodemailer.createTransport( {
+            service: "Gmail",
+            auth: {
+                user: process.env.USER_EMAIL,
+                pass: process.env.USER_PASSWORD,
+            }
+        });
+
+        const mailOptions = {
+            from: process.env.SENDER_EMAIL,
+            to: user.email,
+            subject: "Password Reset",
+            text: `Please click on the link to reset your password: <a href="http://localhost:7000/api/users/verify-email/${ resetToken }">Forgot Password</a>`,
+             
+        };
+          
+            transporter.sendMail(mailOptions, (error,info) =>{
+            if (error) {
+                // console.log('Error sending email:', error);
+                return res.status(500).json({
+                    error: 'failed to send reset email.'
+                });
+                    } else {
+                        // console.log('Email sent:', info.response);
+                        res.json({message: 'Reset password sent successfully.'})
+                    }
+            })
+         } catch (error) {
+        // console.log("Error resetting password:", error);
+        res.status(500).json({
+            error:'An internal server error occurred'
+        })
+    }
+
+}
   
   module.exports = {
       signUp,
@@ -234,4 +426,8 @@ const transporter = nodemailer.createTransport({
       signOut,
       verifyEmail,
       resendVerificationEmail,
+      changePasword,
+      resetPassword,
+      forgotPassword
+      
   }

@@ -1,6 +1,6 @@
 const express = require( 'express' );
 const router = express.Router();
-const { signUp, verifyEmail, resendVerificationEmail, signIn, signOut,  } = require( '../controllers/userController' );
+const { signUp, verifyEmail, resendVerificationEmail, signIn, signOut, changePasword, resetPassword, forgotPassword } = require( '../controllers/userController' );
 
 
 router.route( "/users/sign-up" )
@@ -17,6 +17,16 @@ router.route( "/users/sign-in" )
     
 router.route( "/users/sign-out" )
     .post(signOut)
+
+        
+router.route( "/changePassword/:id" )
+.patch(changePasword)
+
+router.route( "/resetPassword/:id" )
+.post(resetPassword)
+
+router.route( "/forgotPassword/:id" )
+.post(forgotPassword)
     
 
 module.exports = router;

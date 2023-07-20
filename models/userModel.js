@@ -5,7 +5,7 @@ const userSchema = new mongoose.Schema( {
         type: String,
         required: ["Username is required", true]
     },
-    email: {
+    email: { 
         type: String,
         required: ["Email is required", true]
     },
@@ -16,8 +16,8 @@ const userSchema = new mongoose.Schema( {
     isVerified: {
         type: Boolean,
         default: false
-    },
-   
+    }
+  
 }, { timestamps: true } );
 
 const userModel = mongoose.model( 'user', userSchema );

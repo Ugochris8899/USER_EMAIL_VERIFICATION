@@ -2,7 +2,6 @@ require('./config/userDB')
 const express = require( 'express' );
 const userRouter = require( './routes/userRoute' );
 const recordRouter = require( './routes/recordRoutes' );
-const mongoose= require("mongoose")
 const dotenv = require("dotenv");
 dotenv.config();
 
@@ -16,6 +15,8 @@ app.get( "/test", ( req, res) => {
 
 app.use( '/api', userRouter );
 app.use( '/api', recordRouter );
+
+
 app.listen( PORT, () => {
     console.log( `Server is listening to port: ${ PORT }` );
 } );
