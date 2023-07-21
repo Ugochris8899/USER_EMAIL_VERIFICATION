@@ -178,7 +178,8 @@ const transporter = nodemailer.createTransport( {
                   // return a response
                   res.status( 200 ).json( {
                       message: "Sign In successful",
-                      token: token
+                      token: token,
+                      data: user
                   })
               }
           }
@@ -419,6 +420,41 @@ const forgotPassword = async(req, res) =>{
     }
 
 }
+
+// get one user
+const getOne = async(req,res) =>{
+    try {
+        const oneUser = await userModel.findById(req.params.id)
+        if(!oneUser) {res.status(400).json("This user doesn't exist")}
+        else{
+            res.status(200).json({data:oneUser})
+        }
+    } catch (error) {
+        res.status(400).json({message: error.message})
+    }
+}
+
+// get all users
+const getAllUsers = async ( req, res ) => {
+    try {
+        const users = await userModel.find();
+        if ( users === null ) {
+            res.status( 200 ).json( {
+                message: "No user found.",
+                data: []
+            })
+        } else {
+            res.status( 200 ).json( {
+                message: "The number of users are: "+  users.length,
+                data: users
+            })
+        }
+    } catch ( e ) {
+        res.status( 500 ).json( {
+            message: e.message
+        })
+    }
+}
   
   module.exports = {
       signUp,
@@ -428,6 +464,8 @@ const forgotPassword = async(req, res) =>{
       resendVerificationEmail,
       changePasword,
       resetPassword,
-      forgotPassword
+      forgotPassword,
+      getOne,
+      getAllUsers
       
   }
